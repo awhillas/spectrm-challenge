@@ -1,51 +1,82 @@
-# Spectrm AI Hiring Challenge
-
-Knowing what to say is not always easy - especially if you're a chatbot. 
-
-Generating answers from scratch is very difficult and would most likely result in [nonsense](http://benjamin.wtf/) or [worse](https://twitter.com/tayandyou) - but definitely not a pleasant user experience. Therefore we're taking one step back and instead provide the correct replies which now "only" have to be chosen in the right dialog context.
-
-In this challenge you're given a dataset with fictional dialogs (adapted from \[1\]) from which one reply is missing and additionally a list with all missing replies. Your task is to map all missing replies to the correct conversation.
-
-### Dataset
-The dataset consists of 4 files:
-`train_dialog.txt` and `test_dialog.txt` each contain the conversations. The format is always `c#####` indicating the conversation number separated by `+++$+++` from the reply text. For example one conversation from the training set is the following:
-```
-c03253 +++$+++ Wow! This is like my dream room! Are these all records!
-c03253 +++$+++ I have about fifteen hundred 78s at this point. I've tried to pare down my collection to the essential...
-c03253 +++$+++ God, look at this poster!  I can't believe this room! You're the luckiest guy in the world! I'd kill to have stuff like this!
-c03253 +++$+++ Please... go ahead and kill me! This stuff doesn't make you happy, believe me.
-c03253 +++$+++ You think it's healthy to obsessively collect things? You can't connect with other people so you fill your life with stuff...  I'm just like all the rest of these pathetic collector losers.
-```
-All original conversations are at least four lines long and always the second to last line is missing in the dialogs.
-
-The missing replies are found in the files `train_missing.txt` and `test_missing.txt` respectively. For the training dialogs, the conversation number is given with the reply as in the dialog files, e.g. the missing line to the above conversation would be
-```
-c03253 +++$+++ Oh, come on! What are you talking about?
-```
-The missing lines for the test dialogs always have `c00000` as the conversation number but are otherwise formatted the same as the training file.
-While some of the short replies might be the same, every missing reply belongs to exactly one conversation.
-
-### Task
-Your task is now to take the missing test replies and map them to the corresponding dialogs. More specifically you should write a script `match_dialogs.py` which can be called with the path to a file with the incomplete dialogs and the path to the missing replies and then outputs a file `test_missing_with_predictions.txt` in the same format as `test_missing.txt` only with actual conversation numbers from `test_dialog.txt` instead of `c00000`.
-
-You can chose whatever approach you want to solve the task, we only ask you to please write your code in **Python 2.7** and if you use any external libraries provide a `requirements.txt` file from which these libraries can be installed with `pip install -r requirements.txt` (you might want to use a virtual environment and when you're done call `pip freeze > requirements.txt`). 
-
-While it is okay to use other resources such as pretrained word embeddings to solve the task, we ask you not to train your algorithm using the original conversations provided with \[1\] as this would lead to overfitting, i.e. considered cheating.
-
-You should **turn in all the code required to solve the task**, i.e. which allows us to create the `test_missing_with_predictions.txt` file from the file without labels. Besides the accuracy of the predicted conversation labels we will also evaluate your code with respect to efficiency, maintainability, and readability (it might not hurt to have a look at some [style guides](https://google.github.io/styleguide/pyguide.html)).
-
-In addition to the code which solves the task please turn in a text file or pdf with **answers to the following questions**:
-
-1. Describe your approach. Which methods did you chose and why?
-2. How do you evaluate your performance?
-3. Where are the weaknesses of your approach? What has to be considered when applying an approach like this in practice?
-
-Feedback to the challenge itself is appreciated as well. We acknowledge that this task is quite hard and we do not expect a perfect solution. We're more interested in how you approach a difficult problem, how you think and code. If you don't have the time to implement everything you wanted to try out, it is also okay if you only turn in a basic solution and then when answering the questions explain which other approaches might improve the performance.
-
-We hope you'll have fun with this challenge and we're very much looking forward to your solution! If you have any questions please send an email to franzi@spectrm.de. If you already have an interview scheduled with us, please **send us your solution at least two days before your interview** to give us enough time to review it. Thanks!
+# Research Journal
 
 
+The task is to choose a sentence from a long list of sentences. The minimum complexity will be `O(n^2)` as for every case one needs to look at every solution. Eliminating chosen solutions will reduce this but also runs the risk of doubling error rates (as choosing the wrong sentence removes it for it's correct partner as well).
 
-\[1\]   "Chameleons in imagined conversations: A new approach to understanding coordination of linguistic style in dialogs"  
-     Cristian Danescu-Niculescu-Mizil and Lillian Lee  
-     Proceedings of the Workshop on Cognitive Modeling and Computational Linguistics, ACL 2011.  
+Approaches which are based around the *Danescu-Niculescu-Mizil, Lee (2011)* paper's idea that interlocutors unconsciously engage in coordination and this can be detected with the *convergence* measure they have come up with.
+
+## Day 1
+
+Use a Maximum Entropy (MaxEnt) model to put this theory to the test. Feature detectors will be used to detect the presence of each of the nine "trigger family"'s presence between pairs of utterances (note that the data has multiple sentences per utterance but will all be treated as the same. Possibly in the future test weather it is better the just look at the last sentence?). These trigger families are:
+
+-	Negation - not, never
+-	Articles - an, the
+-	Auxiliary verbs - will, have
+-	High frequency adverbs - really, quickly
+-	Conjunctions - but, whereas
+-	Indefinite pronouns - it, those
+-	Personal pronouns - them, her
+-	Prepositions - to, with
+-	Quantifiers - few, much
+
+Some extra features that might be good features are:
+
+-	matching nouns: detect if the same noun is used in any of the previous sentences
+-	matching verbs: same as nouns
+-	matching punctuation: look for matching exclamation/question marks in previous utterances of the same speaker.
+-	Difference in the length of sentence of `a` to `b` as shorter sentences seem to induce short replys.
+
+Training on every pair of utterances in the training data and let the MaxEnt model determine the relative weight of each feature.
+
+## Day 2: Real AI instead of Kluge Hans
+
+I might drop the 'Clever Hans' approach which i feel the bag of words appoch to NLP is about, training for the task instead of trying to understand intelligence. I'm _more interested in_ trying to use parsed sentences to "understand" what the dialog is about and match on higher level stuff like subject / object (co-references), sentiment analysis, etc of the dialogs
+
+Perhaps also look at structural patterns. There has been some work on
+
+-	discourse coherence
+	-	[Structural Parallelism and Discourse Coherence: A Test of Centering Theory](http://www.sciencedirect.com/science/article/pii/S0749596X9892575X)
+	-	[Representing Discourse Coherence: A Corpus-Based Study](http://www.mitpressjournals.org/doi/pdf/10.1162/0891201054223977)
+
+Possibly thinking about using FrameNet to fill-in some blanks when comparing subjects and related verbs around a topic.
+
+This is a very hard approch and will require some long term research. Perhaps too much for this challenge.
+
+## Day 3: Base line and dialog frames
+
+
+Going to start with a baseline test which just matches NOUNs+PROPNs and VERBs and chooses based on the total matching score.
+
+Then i might augment this with word embeddings to see if that lifts the score. Will also try this on matching all types in the missing sentence with those in the dialog.
+
+Could then try to apply a neural network on top of this to see if it does any better.
+
+### Theory: Types of conversations
+
+I'm thinking that the conversations fall into some sort of grouping i.e. interrogation (a question/answer pattern). The sentiment of the individual speakers might also be gauged to try and match tone of speaker. These would match a frame from FrameNet and a preprocessing task might be the match a frame to a dialog and then look for the missing sentence. Out of scope for this challenge.
+
+## Day 4: Deep net
+
+The plan is to use word embeddings (300 dimensional vector) for training a multi-layed perceptron [MLP], a _deep net_ as they are called these days, with a variety training approches including: 
+
+- the raw sum of all the dialog sentences 
+- just the previous sentences by the same speaker 
+- just the pervious and following sentences to the missing one
+- linguistic coordination elements i.e. for each type of POS tag in the missing sentence calculate the distance for each of the above, using them as additional input? 
+	* Or instead of the distance just sum their vectors and concatenate them to be used as input?
+
+Might also use the **log likelyhood** information that is supplied by the spaCy toolkit. This will help with filtering nouns and verbs as _the less likely a word is the more information in carries_.
+
+The MLP will have no special architecture (not convolutional or recurrent) with two output nodes i.e. one for each class and then turn this into a confidence using a _softmax_ function.
+
+### Read two papers on understanding (future directions)
+
+- [Representing discourse coherence: A corpus-based study](http://www.mitpressjournals.org/doi/pdf/10.1162/0891201054223977)(2005) which offers a non-heirarchical representation of representing discourse cohesion.
+- [Frame semantics for text understanding](http://www.ccs.neu.edu/course/csg224/resources/framenet/framenet.pdf)(2001) which talks about how one might use FrameNet to understand text by mapping to frames. The approch they suggest would be:
+
+	1. choose a word (starting from the highest semanticallyrelevant predicate in a given sentence),
+	2. determining the frames that it is capable of evoking, noticing the semantic roles of the props and participants in each such frame, trying to match the semantic needs associated with each such frame (and hence with each sense of the word) with phrases found in the sentence at hand
+	3. choosing the one which makes the most coherent fit, and 
+	4. entering the semantic structures associated with the dependent constituents into slots provided by the selected frame.
+	
+	Which again would be a research project in itself.
