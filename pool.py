@@ -1,26 +1,22 @@
 from multiprocessing import Pool
 
-PROCESSES = 4
+import spacy
 
-t = None
 
-def run(n):
-	return t.f(n)
 
-class Test(object):
-	def __init__(self, number):
-		self.number = number
+experiment
 
-	def f(self, x):
-		print x * self.number
+def train(data):
+	experiment.model(data)
 
-	def pool(self):
-		pool = Pool(2)
-		pool.map(run, range(10))
+class Experiment(object):
+	def __init__(self, ModelClass, data):
+		print "Loading English module..."
+		self.model = ModelClass(spacy.load('en'))
+		self.dialogs = data['dialogs']
+		self.missing = data['missing']
+		experiment = self
 
-if __name__ == '__main__':
-	global t
-	t = Test(9)
-	t.pool()
-	pool = Pool(2)
-	pool.map(run, range(10))
+	def run():
+		pool = Pool()
+		pool.map(train, self.data.items())

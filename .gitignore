@@ -4,4 +4,7 @@
 *.py[c|o]
 *.py~
 .virtualenv
+.idea/
+data/
+*.pickle
 

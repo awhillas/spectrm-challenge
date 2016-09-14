@@ -3,17 +3,12 @@ from itertools import islice
 from collections import OrderedDict
 from multiprocessing import Pool
 
-import spacy
-# from spacy.parts_of_speech import NOUN, VERB, PROPN, ADJ
 from numpy import dot
 from numpy.linalg import norm
 
 import models
 from Results import Result
 
-print "Loading English module..."
-nlp = spacy.load('en')
-# nlp = None
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -22,15 +17,15 @@ nlp = spacy.load('en')
 
 experiment = None  # Global that will hold the experiment instance for the following functions...
 
-def trainer():
+def trainer(data):
 	""" Multiprocessing training function
 	Coz the multiprocessing lib can only all functions defined at the modules top level
 	"""
-	return experiment.train()
+	return experiment.train(data)
 
 def tester():
 	""" Multiprocessing testing function """
-	experiment.test()
+	experiment.test(data)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -44,10 +39,10 @@ class Experiment(object):
 	ModelClass = None
 	test_set_size = 0.10  # % of data for testing.
 
-	def __init__(self, data, train = True, test = False):
+	def __init__(self, data, train = True, test = True):
 		self.data = data
-		self.do_training = train  # train a model
-		self.do_testing = test  # reserve 10% data for testing, don't save model.
+		self.do_training = train
+		self.do_testing = test
 		experiment = self
 
 	@property
@@ -56,14 +51,14 @@ class Experiment(object):
 
 	def training_data(self):
 		return {
-			'missing': dict(self.data['missing'].items()[:self.data_split_point]),
-			'dialogs': dict(self.data['dialogs'].items()[:self.data_split_point])
+			'missing': OrderedDict(self.data['missing'].items()[:self.data_split_point]),
+			'dialogs': OrderedDict(self.data['dialogs'].items()[:self.data_split_point])
 		}
 
 	def test_data(self):
 		return {
-			'missing': dict(self.data['missing'].items()[self.data_split_point:]),
-			'dialogs': dict(self.data['dialogs'].items()[self.data_split_point:])
+			'missing': OrderedDict(self.data['missing'].items()[self.data_split_point:]),
+			'dialogs': OrderedDict(self.data['dialogs'].items()[self.data_split_point:])
 		}
 
 	def run(self):
@@ -72,39 +67,19 @@ class Experiment(object):
 		The cycle all experiments go through.
 		"""
 		# train the model or use the one given.
+		model = self.ModelClass()
 		if self.do_training:
-			model = self.train()
+			print "Doing training"
+			model.train(self.training_data())
+			model.save()
+		else:
+			model.load()
 
 		# Test the model.
 		if self.do_testing:
-			return self.test(model, self.test_data())
-
-	def train(self, data):
-		""" Train the model """
-
-		print("Training model...")
-		model = ModelClass(nlp)
-		model.train(data)
-		# else:
-		# 	model = self.load()
-
-		# if not self.do_testing:  # we only train on 90% when testing so don't keep model
-		# 	self.save()
-
-		return model
-
-	def test(self, model, data):
-		guesses = []
-		solutions = []
-		i = 0
-		for id, sentence in data['missing'].iteritems():
-			i += 1
-			print "{0:.1f}% {1}: {2}".format(float(i)/len(data['missing'])*100, id, sentence)
-			prediction = model.predict(sentence, data['dialogs'], id)
-			guesses.append(prediction)
-			solutions.append(id)
-		return Result(guesses, solutions)
-
+			print "Doing testing"
+			guesses = model.test(self.test_data())
+			return Result(guesses, self.test_data()['missing'].keys())
 
 class BaseLine(Experiment):
 	"""
@@ -115,11 +90,11 @@ class BaseLine(Experiment):
 	# This model isn't really a model.
 	ModelClass = models.NoModelCBOW
 
-	def train(self):
-		print "Training model (sort of)"
-		model = self.ModelClass(nlp)
-		model.train(self.training_data())
-		return model
+	# def train(self):
+	# 	print "Training {} model.".format(type(BaseLine.ModelClass))
+	# 	model = BaseLine.ModelClass()
+	# 	model.train(self.training_data()['dialogs'].items())
+	# 	return model
 
 	def training_data(self):
 		return self.test_data()
@@ -127,13 +102,15 @@ class BaseLine(Experiment):
 	def test_data(self):
 		""" NoModel requires no (real) training so use all data for testing """
 		# return self.data
-		return {
-			'missing': dict(sorted(self.data['missing'].items())[:100]),
-			'dialogs': dict(sorted(self.data['dialogs'].items())[:100])
+		return {  # dev, small set to iron out bugs first
+			'missing': OrderedDict(sorted(self.data['missing'].items())[:1000]),
+			'dialogs': OrderedDict(sorted(self.data['dialogs'].items())[:1000])
 		}
+
 
 class BaseLineAvg(BaseLine):
 	ModelClass = models.NoModelAvg
+
 
 class BaseLineRareWords(BaseLine):
 	ModelClass = models.NoModelRareWords

@@ -29,6 +29,7 @@ def clean_raw_text(raw_dialogs, one_sentence = False):
 	for sentence in raw_dialogs:
 		id, text = sentence.strip('\n').split(' +++$+++ ')
 		s = re.sub('<[^<]+?>', '', text) # clean out html tags
+		s = re.sub(r'([.]+?)\1+', r'\1', s)  # collapse repeated '.....' to a single '.'
 		en = unicode(s, "utf-8")
 		if not one_sentence:
 			if id in output:
@@ -40,7 +41,7 @@ def clean_raw_text(raw_dialogs, one_sentence = False):
 	return output
 
 def save_results(results_list):
-	with open(TEST_OUTPUT_FILE) as f:
+	with open(TEST_OUTPUT_FILE, 'w') as f:
 		for item in f:
 			f.write("%s\n" % item)
 
@@ -74,7 +75,7 @@ if __name__ == '__main__':
 
 	# Load the data
 
-	# print "train", train, "test", test, sys.argv
+	# print "TRAIN", train, "TEST", test, sys.argv
 
 	data = {'dialogs':{}, 'missing':{}}
 	data['dialogs'] = load_raw_data(dialogs_file)

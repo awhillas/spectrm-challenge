@@ -13,7 +13,7 @@ class Result(object):
 
 	def precision(self):
 		correct = 0
-		size = len(self.guesses)
+		size = len(self.solutions)
 		for i in range(0, size):
 			if self.guesses[i] == self.solutions[i]:
 				correct += 1
@@ -21,8 +21,12 @@ class Result(object):
 				self.mistakes.append(self.guesses[i])
 		return float(correct) / size
 
+	def correct(self):
+		return []
+
 	def __str__(self):
 		if self.solutions:
+			assert len(self.solutions) == len(self.guesses)
 			return "Experiment {}\nPrecision: {}%".format(
 				self.datetime.strftime("%Y-%m-%d at %H:%M:%S"),
 				self.precision() * 100
