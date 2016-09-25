@@ -1,0 +1,137 @@
+The first column in this line output is the line count. This is the result of
+running:
+
+cat test_missing.txt | tr '[:upper:]' '[:lower:]' | sort | uniq -c | sort -r | awk '{if ($1 > 1) print $0}'
+
+This means that it would be that it would be very improbable of achieving 100%
+on this testing data as the best one could do is choose at random from one of the
+occurrences that are listed here.
+
+In total there are 520 lines that are repeats, which is 7.5% of the total number
+of lines in test_missing.txt
+
+  44 c00000 +++$+++ what?
+  35 c00000 +++$+++ yes.
+  30 c00000 +++$+++ no.
+  29 c00000 +++$+++ yeah.
+  22 c00000 +++$+++ why?
+  13 c00000 +++$+++ why not?
+  12 c00000 +++$+++ i don't know.
+   9 c00000 +++$+++ who?
+   9 c00000 +++$+++ okay.
+   9 c00000 +++$+++ huh?
+   8 c00000 +++$+++ how?
+   7 c00000 +++$+++ what are you talking about?
+   6 c00000 +++$+++ what for?
+   6 c00000 +++$+++ that's right.
+   6 c00000 +++$+++ thank you.
+   6 c00000 +++$+++ so?
+   5 c00000 +++$+++ yes, sir.
+   5 c00000 +++$+++ what happened?
+   5 c00000 +++$+++ what do you mean?
+   5 c00000 +++$+++ uh-huh.
+   5 c00000 +++$+++ of course.
+   5 c00000 +++$+++ no, sir.
+   5 c00000 +++$+++ no!
+   4 c00000 +++$+++ yeah?
+   4 c00000 +++$+++ where?
+   4 c00000 +++$+++ when?
+   4 c00000 +++$+++ what is it?
+   4 c00000 +++$+++ what does that mean?
+   4 c00000 +++$+++ thanks.
+   4 c00000 +++$+++ tell me.
+   4 c00000 +++$+++ really?
+   4 c00000 +++$+++ oh.
+   4 c00000 +++$+++ i know.
+   3 c00000 +++$+++ you got it.
+   3 c00000 +++$+++ you do?
+   3 c00000 +++$+++ what?!
+   3 c00000 +++$+++ what's that?
+   3 c00000 +++$+++ well...
+   3 c00000 +++$+++ sure.
+   3 c00000 +++$+++ me?
+   3 c00000 +++$+++ i'm sorry.
+   3 c00000 +++$+++ i know that.
+   3 c00000 +++$+++ i don't understand.
+   2 c00000 +++$+++ you're kidding.
+   2 c00000 +++$+++ you're kidding me.
+   2 c00000 +++$+++ you saved my life.
+   2 c00000 +++$+++ you know i can't.
+   2 c00000 +++$+++ you got that right.
+   2 c00000 +++$+++ you didn't tell him about me?
+   2 c00000 +++$+++ you did?
+   2 c00000 +++$+++ you are.
+   2 c00000 +++$+++ yes?
+   2 c00000 +++$+++ yes...
+   2 c00000 +++$+++ yes i do.
+   2 c00000 +++$+++ yah.
+   2 c00000 +++$+++ wow.
+   2 c00000 +++$+++ why do you say that?
+   2 c00000 +++$+++ who is he?
+   2 c00000 +++$+++ which was?
+   2 c00000 +++$+++ what's your name?
+   2 c00000 +++$+++ what's that, peanut?
+   2 c00000 +++$+++ what is that?
+   2 c00000 +++$+++ what do you think?
+   2 c00000 +++$+++ what did you think?
+   2 c00000 +++$+++ what are you going to do?
+   2 c00000 +++$+++ uh, why, why are you doing this?
+   2 c00000 +++$+++ uh huh.
+   2 c00000 +++$+++ three.
+   2 c00000 +++$+++ these people play very rough. they don't want to lose this case. there's a lot of pressure they can bring to bear, i...
+   2 c00000 +++$+++ that's ridiculous.
+   2 c00000 +++$+++ that depends.
+   2 c00000 +++$+++ still, it must be kinda rough.
+   2 c00000 +++$+++ sorry.
+   2 c00000 +++$+++ shut up.
+   2 c00000 +++$+++ shut up!
+   2 c00000 +++$+++ she's protecting the doctors she'd be up there on the stand...
+   2 c00000 +++$+++ she'd aspirated vomitus into her mask...
+   2 c00000 +++$+++ right.
+   2 c00000 +++$+++ really.
+   2 c00000 +++$+++ please.
+   2 c00000 +++$+++ oh?
+   2 c00000 +++$+++ oh god.
+   2 c00000 +++$+++ not yet.
+   2 c00000 +++$+++ nope.
+   2 c00000 +++$+++ no?
+   2 c00000 +++$+++ no... but...
+   2 c00000 +++$+++ no thanks.
+   2 c00000 +++$+++ never heard of him.
+   2 c00000 +++$+++ mm-hm.
+   2 c00000 +++$+++ meaning?
+   2 c00000 +++$+++ like what?
+   2 c00000 +++$+++ kind of.
+   2 c00000 +++$+++ it's important.
+   2 c00000 +++$+++ i'm sorry i didn't get a chance to --
+   2 c00000 +++$+++ i'm fine.
+   2 c00000 +++$+++ i see.
+   2 c00000 +++$+++ i said you're soft.
+   2 c00000 +++$+++ i promise, dorothy. i promise.
+   2 c00000 +++$+++ i have.
+   2 c00000 +++$+++ i guess so, sir.
+   2 c00000 +++$+++ i don't think so.
+   2 c00000 +++$+++ i don't believe you.
+   2 c00000 +++$+++ i don't believe this.
+   2 c00000 +++$+++ how will it?
+   2 c00000 +++$+++ how much?
+   2 c00000 +++$+++ how do you know?
+   2 c00000 +++$+++ he's dead.
+   2 c00000 +++$+++ happy birthday.
+   2 c00000 +++$+++ guess!
+   2 c00000 +++$+++ great.
+   2 c00000 +++$+++ gotta go.
+   2 c00000 +++$+++ get out.
+   2 c00000 +++$+++ for what purpose?
+   2 c00000 +++$+++ falling.
+   2 c00000 +++$+++ excuse me?
+   2 c00000 +++$+++ everything?
+   2 c00000 +++$+++ don't.
+   2 c00000 +++$+++ do i?
+   2 c00000 +++$+++ come on.
+   2 c00000 +++$+++ are you sure?
+   2 c00000 +++$+++ and what?
+   2 c00000 +++$+++ all right then.
+   2 c00000 +++$+++ a what?
+   2 c00000 +++$+++ a surprise?
+   2 c00000 +++$+++ 'code blue'...
