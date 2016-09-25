@@ -16,4 +16,9 @@ pip install -r requirements.txt
 sputnik --name spacy --repository-url http://index.spacy.io install en==1.1.0
 ```
 
-The second line here installs the english language model used by the spaCy NLP library.
+The second line here installs the english language model used by the [spaCy NLP](http://spacy.io/) library which handles the tedious POS tagging details.
+
+Environmental Variables
+-----------------------
+
+Are listed in `.env`. I have `autoenv` installed which `source .env` every time I `cd` to the project folder so these are added automatically for me (as well as the virtualenv being setup too :). This is what sets up Keras to use TensorFlow but it should work ether way (but i haven't tested with the default 'theano')

@@ -9,17 +9,24 @@ cloudpickle==0.2.1        # via spacy
 cymem==1.31.2             # via preshed, spacy, thinc
 dill==0.2.5               # via multiprocess, pathos
 first==2.0.1              # via pip-tools
+h5py==2.6.0
+keras==1.0.8
 multiprocess==0.70.4      # via pathos
 murmurhash==0.26.4        # via spacy, thinc
-numpy==1.11.1             # via spacy, thinc
+numpy==1.11.1             # via h5py, scipy, spacy, theano, thinc
 pathos==0.2.0
 pip-tools==1.7.0
 plac==0.9.6               # via spacy
 pox==0.2.2                # via pathos
 ppft==1.6.4.6             # via pathos
 preshed==0.46.4           # via spacy, thinc
+py==1.4.31                # via pytest
+pytest==3.0.2
+pyyaml==3.12              # via keras
+scipy==0.18.0             # via theano
 semver==2.6.0             # via sputnik
-six==1.10.0               # via pip-tools, spacy
+six==1.10.0               # via h5py, keras, pip-tools, spacy, theano
 spacy==0.100.7
 sputnik==0.9.3            # via spacy
+theano==0.8.2             # via keras
 thinc==5.0.8              # via spacy

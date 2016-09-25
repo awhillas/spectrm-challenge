@@ -1,3 +1,6 @@
 pip-tools
+pytest
 spacy
 pathos
+keras
+h5py

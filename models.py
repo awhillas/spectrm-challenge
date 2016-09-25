@@ -15,8 +15,8 @@ from numpy.linalg import norm
 import spacy
 from spacy.parts_of_speech import IDS as POS_tags
 
-print("Loading English module...")
-nlp = spacy.load('en')
+# print("Loading English module...")
+# nlp = spacy.load('en')
 
 # cosine to measue the similarity of two vectors
 cosine = lambda v1, v2: numpy.dot(v1, v2) / (norm(v1) * norm(v2))
