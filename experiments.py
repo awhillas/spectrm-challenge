@@ -1,7 +1,8 @@
 from __future__ import print_function
 
 import os.path
-from collections import OrderedDict
+import math
+import random
 
 import numpy
 from keras.models import Sequential
@@ -9,27 +10,10 @@ from keras.layers import Dense, Activation, Embedding, Convolution1D, MaxPooling
 from keras.models import load_model
 
 import models
-from corpus import Formare, BlobFormare
+from corpus import Corpus, Formare, BlobFormare
 from Results import Result
+from ga import GeneticAlgorithm
 
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-# Multi processing stuff
-
-experiment = None  # Global that will hold the experiment instance for the following functions...
-
-def trainer(data):
-	""" Multiprocessing training function
-	Coz the multiprocessing lib can only all functions defined at the modules top level
-	"""
-	return experiment.train(data)
-
-def tester(data):
-	""" Multiprocessing testing function """
-	experiment.test(data)
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 class Experiment(object):
 	"""
@@ -39,29 +23,50 @@ class Experiment(object):
 	"""
 	# Override for save file names
 	ModelClass = None
-	test_set_size = 0.10  # % of data for testing.
 
-	def __init__(self, data, train = True, test = True):
-		self.data = data
+	def __init__(self, dialogs_file, missing_file, train = True, testing = True, clip_data_at=0):
+		super(Experiment, self).__init__()
+		self.dialogs_file = dialogs_file
+		self.missing_file = missing_file
 		self.do_training = train
-		self.do_testing = test
-		experiment = self
+		self.do_testing = testing
+		self.cv_split = 0.1  # % of data for testing.
+		self._corpus = None
+		self.clip_data_at = clip_data_at
+		self.tag = False
+		self.parse = False
+		self.training_set = None
+		self.testing_set = None
 
 	@property
-	def data_split_point(self):
-		return int(len(self.data['missing']) * (1 - self.test_set_size))
+	def corpus(self):
+		if self._corpus is None:
+			print("Processing data...")
+			self._corpus = Corpus(self.dialogs_file, self.missing_file,
+								 tag=self.tag,
+								 parse=self.parse,
+								 training=self.do_training,
+								 clip_data_at=self.clip_data_at)
+			print(len(self._corpus), "dialogs loaded!")
+
+		return self._corpus
+
+	def split_data(self):
+		""" Split data into training and testing """
+		if self.do_testing:
+			return self.corpus.split(self.cv_split)
+		else:
+			return self.corpus, None
 
 	def training_data(self):
-		return {
-			'missing': OrderedDict(self.data['missing'].items()[:self.data_split_point]),
-			'dialogs': OrderedDict(self.data['dialogs'].items()[:self.data_split_point])
-		}
+		if self.training_set in None:
+			self.training_set, self.testing_set = self.split_data()
+		return self.training_set
 
 	def test_data(self):
-		return {
-			'missing': OrderedDict(self.data['missing'].items()[self.data_split_point:]),
-			'dialogs': OrderedDict(self.data['dialogs'].items()[self.data_split_point:])
-		}
+		if self.testing_set in None:
+			self.training_set, self.testing_set = self.split_data()
+		return self.testing_set
 
 	def run(self):
 		"""
@@ -71,17 +76,24 @@ class Experiment(object):
 		# train the model or use the one given.
 		model = self.ModelClass()
 		if self.do_training:
-			print("Doing training")
+			print("{0} Training {0}".format("- " * 20))
 			model.train(self.training_data())
 			model.save()
 		else:
+			print("{0} Loading model {0}".format("- " * 20))
 			model.load()
 
 		# Test the model.
-		if self.do_testing:
-			print("Doing testing")
-			guesses = model.test(self.test_data())
-			return Result(guesses, self.test_data()['missing'].keys())
+		print("{0} Testing {0}".format("- "*20))
+		data = self.test_data()
+		solutions = data.raw_missing.keys() if self.do_testing else None
+		test_data = data.raw_missing if type(self.corpus.raw_missing) == list else self.corpus.raw_missing.values()
+		guesses = model.test(test_data)
+		return Result(guesses, solutions)
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - Unsupervsed clustering
+
 
 class BaseLine(Experiment):
 	"""
@@ -89,36 +101,87 @@ class BaseLine(Experiment):
 	improving
 	"""
 
-	# This model isn't really a model.
-	ModelClass = models.NoModelCBOW
+	ModelClass = models.ClusterUnsupervised
 
-	# def train(self):
-	# 	print "Training {} model.".format(type(BaseLine.ModelClass))
-	# 	model = BaseLine.ModelClass()
-	# 	model.train(self.training_data()['dialogs'].items())
-	# 	return model
+	def __init__(self, dialogs_file, missing_file, train = True, testing = True, clip_data_at=0):
+		super(BaseLine, self).__init__(dialogs_file, missing_file, train, testing, clip_data_at)
+		self.tag = True  # this whole approach is based on POS tags :)
+		self.corpus  # build the corpus before we...
+		self.do_training = True  # we always need to build a "model" i.e. digest the dialogs into a cache.
 
 	def training_data(self):
-		return self.test_data()
+		return self.corpus
 
 	def test_data(self):
-		""" NoModel requires no (real) training so use all data for testing """
-		return self.data
-		# return {  # dev, small set to iron out bugs first
-		# 	'missing': OrderedDict(sorted(self.data['missing'].items())[:1000]),
-		# 	'dialogs': OrderedDict(sorted(self.data['dialogs'].items())[:1000])
-		# }
+		""" No real model requires no (real) training so use all data for testing as well as training. """
+		return self.corpus
 
 
-class BaseLineAvg(BaseLine):
-	ModelClass = models.NoModelAvg
+class AverageVectors(BaseLine):
+	ModelClass = models.AverageVectors
 
 
-class BaseLineRareWords(BaseLine):
-	ModelClass = models.NoModelRareWords
+class RareWords(BaseLine):
+	ModelClass = models.RareWords
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - GAs
+
+
+class GeneticAlgorithm(RareWords):
+	def __init__(self, dialogs_file, missing_file, train = True, testing = True, clip_data_at=0,
+				 max_pop_size=10, keep=0.2):
+		super(GeneticAlgorithm, self).__init__(dialogs_file, missing_file, train, testing, clip_data_at)
+		self.max_pop_size = max_pop_size
+		self.keep = int(math.floor(max_pop_size * keep))
+		self.population = []
+		self.epochs = 10
+		self.mutation_rate = 0.1  # how much of the population to mutate...
+		self.mutation_amount = 0.7  # ...by how much
+		self.SolutionClass = models.ClusterUnsupervisedGASolution  # class to
+
+	def run(self):
+		def get_random(item_list, but_not):
+			result = but_not
+			while result != but_not:
+				result = random.choice(item_list)
+			return result
+
+		elite = self.evaluate(self.initial_population())  # Choose the best of the initial population.
+
+		for epoch in range(self.epochs):
+			new_population = elite
+
+			print("Crossover...")
+			for i in range(self.max_pop_size - self.keep):  # make babies to fill up the rest of the population
+				parentA = random.choice(elite)
+				parentB = get_random(elite, parentA)
+				new_population += parentA.crossover(parentB)
+
+			print("Mutate...")
+			for i in range(len(new_population)):
+				if random.random() < self.mutation_rate:
+					new_population[i].mutate(self.mutation_amount)
+
+			print("Evaluate...")
+			elite = self.evaluate(new_population)
+
+		return max(elite, key=lambda item: item.score)
+
+	def initial_population(self):
+		return [self.SolutionClass.factory(self.corpus) for _ in range(self.max_pop_size)]
+
+	def evaluate(self, population):
+		"""
+			Survival of the fittest!
+			Evaluate the entire population select the fittest.
+		"""
+		results = [solution.fitness(self.test_data()) for solution in population]
+		scores = numpy.array(results)
+		return [population[i] for i in numpy.argsort(scores)[-self.keep:]]
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ANNs
 
 
 class MLP(object):
@@ -164,6 +227,7 @@ class MLP(object):
 					  optimizer='adam',
 					  metrics=['accuracy'])
 		return model
+
 
 class CNN(MLP):
 	"""

@@ -1,19 +1,15 @@
 from __future__ import print_function
 
 import sys
-import re
 from os import path
-from collections import OrderedDict
 
 import experiments
-from corpus import Corpus
-from experiments import BaseLine
 
 
 # Data challenge stuff...
 DATA_DIR = 'challenge_data'
-TRAINING_DIALOGS_FILE = 'train_dialogs.txt'
-TRAINING_MISSING_FILE = 'train_missing.txt'
+TRAINING_DIALOGS_FILE = path.join(DATA_DIR, 'train_dialogs.txt')
+TRAINING_MISSING_FILE = path.join(DATA_DIR, 'train_missing.txt')
 TEST_OUTPUT_FILE = 'test_missing_with_predictions.txt'
 
 
@@ -25,35 +21,33 @@ if __name__ == '__main__':
 	and write the predicted conversation numbers for all missing lines to a file
 	named test_missing_with_predictions.txt
 	"""
-	train = False  # If True then a model is produced
+	train = False  # If True then a model is produced and saved else its loaded from a file
+	is_experiment = False
 	clip_data_at = 0
 	# Default experiment class to run. Should train on all training data.
-	ExperimentClass = BaseLine
+	ExperimentClass = experiments.RareWords
 
 	# if called with file names, load data from there else load from default location / output an error
 	if len(sys.argv) > 2:
 		dialogs_file, missing_file = sys.argv[1], sys.argv[2]
 		if len(sys.argv) > 3:
 			# Experimenting...
-			ExperimentClass = getattr(experiments, sys.argv[3])
 			train = True
+			ExperimentClass = getattr(experiments, sys.argv[3])
 			if len(sys.argv) > 4:
+				is_experiment = True
 				# Only use some of the data
 				clip_data_at = int(sys.argv[4])
 	else:
-		train = True
-		dialogs_file, missing_file = path.join(DATA_DIR, TRAINING_DIALOGS_FILE), path.join(DATA_DIR, TRAINING_MISSING_FILE)
+		dialogs_file, missing_file = TRAINING_DIALOGS_FILE, TRAINING_MISSING_FILE  # assume testing already trained model
 		print("please call this script with `python match_dialogs.py path/to/test_dialogs.txt path/to/test_missing.txt`")
 		print("Loading default training data '{}' and '{}'".format(dialogs_file, missing_file))
 
-	# Load the data
-
-	# print "TRAIN", train, "TEST", test, sys.argv  # debug
-	data = Corpus(dialogs_file, missing_file, training=train, clip_data_at=clip_data_at)
-	print(data.length, "Dialogs loaded")
-
 	# Run the experiment(s)
 
-	experiment = ExperimentClass(data)
+	experiment = ExperimentClass(dialogs_file, missing_file, train, is_experiment, clip_data_at)
 	results = experiment.run()
+
 	print(results)
+	if not is_experiment:
+		results.save_guesses(TEST_OUTPUT_FILE)

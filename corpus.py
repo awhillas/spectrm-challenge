@@ -85,13 +85,21 @@ class Corpus(object):
 	Manage the corpus data.
 	"""
 	def __init__(self, dialogs_file=TRAINING_DIALOGS_FILE, missing_file=TRAINING_MISSING_FILE,
-				 training=False, parse=False, tag=False, clip_data_at=0):
+				 training=False, parse=False, tag=True, clip_data_at=0):
+		"""
+		:param dialogs_file: string
+		:param missing_file: string
+		:param training: boolean, should we expect matching missing utterances file or not?
+		:param parse: boolean, spaCy param.
+		:param tag: boolean, spaCy param.
+		:param clip_data_at: int, For dev., should we clip the data at a certain number of records, 0 = nope.
+		"""
 
 		self.nlp = nlp
 		self.parse = parse
 		self.training = training
 
-		# Process Dilaogs file...
+		# Process Dialogs file...
 
 		if type(dialogs_file) == str:
 			self.raw_dialogs  = Corpus.load_raw_data(dialogs_file)
@@ -102,7 +110,7 @@ class Corpus(object):
 
 		# ... and Missing utterances file ... 2nd verse, same as the first (almost).
 
-		if not missing_file is None:
+		if not missing_file is None and training:
 			if type(missing_file) == str:
 				self.raw_missing = Corpus.load_raw_data(missing_file, True)
 			elif type(missing_file) in (dict, OrderedDict):
@@ -112,6 +120,12 @@ class Corpus(object):
 					'Nether a file path nor pre-digested corpus missing utterance data was passed! Got "{}" instead?'.format(
 						type(missing_file)))
 			assert len(self.raw_missing) == len(self.raw_dialogs)  # sanity check
+		elif not missing_file is None:
+			# This is not a test!
+			self.raw_missing = Corpus.load_raw_data(missing_file, True, unlabeled=True)
+			assert len(self.raw_missing) == len(self.raw_dialogs)  # sanity check
+		else:
+			self.raw_missing = None
 
 		# For testing purposes only.
 		if clip_data_at > 0:
@@ -127,6 +141,9 @@ class Corpus(object):
 
 		self.dialogs = dict(dialogs)
 		self.length = len(self.dialogs)
+
+	def __len__(self):
+		return len(self.dialogs)
 
 	def stats(self):
 		""" Get some stats on the corpus dialogs and utterances. """
@@ -155,20 +172,27 @@ class Corpus(object):
 		return Pool(initializer = pool_init, initargs = (self, ))
 
 	@staticmethod
-	def load_raw_data(filename, as_single_sentences = False):
+	def load_raw_data(filename, as_single_sentences = False, unlabeled=False):
 		""" Load, clean and shape raw data from the files. """
 		print("Reading raw data file ", filename)
 		with open(filename,'r') as f:
-			return Corpus.clean_raw_text(f.readlines(), as_single_sentences)
+			return Corpus.clean_raw_text(f.readlines(), as_single_sentences, unlabeled)
 
 	@staticmethod
-	def clean_raw_text(raw_dialogs, one_sentence = False):
+	def clean_raw_text(raw_dialogs, one_sentence=False, unlabeled=False):
 		"""
 		Remove the cruff from the beginning of each line and organise text into dialogs
 		indexed by ID. Parse with spaCy.
+		:param raw_dialogs: lines to process
+		:param one_sentence: multiple lines per id or just one sentence?
+		:param no_ids: no ids for sentences i.e. unlabeled data
+		:return:
 		"""
 		print("Processing...")
-		output = {}
+		if unlabeled:
+			output = []
+		else:
+			output = {}
 		for sentence in raw_dialogs:
 			id, text = sentence.strip('\n').split(' +++$+++ ')
 			s = re.sub('<[^<]+?>', '', text) # clean out html tags
@@ -180,8 +204,14 @@ class Corpus(object):
 				else:
 					output[id] = [en]
 			else:
-				output[id] = en
-		return OrderedDict(sorted(output.iteritems()))
+				if unlabeled:
+					output.append(en)
+				else:
+					output[id] = en
+		if unlabeled:
+			return output
+		else:
+			return OrderedDict(sorted(output.iteritems()))
 
 	def sentence_triples_cbow(self, cv_split = 0.1):
 		""" triples of sentences: previous, target & following sentences as CBOW dependency vectors 300 long each.
@@ -398,6 +428,38 @@ class Dialog(object):
 	def blob(self, form=Formare()):
 		return numpy.concatenate([doc.to_array(form.attr).T[0] for doc in self.dialog])
 
+	def group_dialogs_by_pos(self, filter_prob = 0.0):
+		def merge_vec_dicts(a, b):
+			for pos, vec in b.iteritems():
+				if pos in a:
+					a[pos] += vec
+				else:
+					a[pos] = vec
+
+		out = {}
+		for doc in self.dialog:
+			merge_vec_dicts(out, Dialog.group_by_pos(doc, filter_prob))
+		return out
+
 	@staticmethod
-	def to_array(dialogs, attribute):
-		return map(numpy.concatenate, [ utter.to_array([attribute]).T for utter in dialogs ])
+	def group_by_pos(doc, filter_prob = 0.0):
+		"""
+        CBOW word embeddings
+        grouped by POS tags
+        filtering out words with a log frequency greater than -8.0
+		:param doc: spaCy Doc
+		:param filter_prob: float < 0.0, max log probability of a word
+		:return: dict, {pos_tag: word_vector, ... }
+		"""
+		pos_vector_dict = {}
+		for word in doc:
+			if word.prob < filter_prob and numpy.count_nonzero(word.vector) > 0:  # filter all zero vectors
+				if word.pos_ in pos_vector_dict:
+					pos_vector_dict[word.pos_] = pos_vector_dict[word.pos_] + word.vector
+				else:
+					pos_vector_dict[word.pos_] = word.vector
+		return pos_vector_dict
+
+	@staticmethod
+	def to_array(dialog, attribute):
+		return map(numpy.concatenate, [ utter.to_array([attribute]).T for utter in dialog ])

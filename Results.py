@@ -1,8 +1,10 @@
+from __future__ import print_function
+
 from datetime import datetime
 
 class Result(object):
 	"""
-	Manage generating mettrics for results and displaying them.
+	Manage generating metrics for results and displaying them.
 	At the moment only looking at binomial experiment i.e. solutions or not
 	"""
 	def __init__(self, guesses, solutions = None):
@@ -11,7 +13,17 @@ class Result(object):
 		self.solutions = solutions
 		self.mistakes = []
 
-	def precision(self):
+	def __str__(self):
+		if self.solutions:
+			assert len(self.solutions) == len(self.guesses)  # sanity check
+			return "Experiment {}\nAccuracy: {}%".format(
+				self.datetime.strftime("%Y-%m-%d at %H:%M:%S"),
+				self.accuracy() * 100
+			)
+		else:
+			return "No solutions provided. Can not calculate metrics."
+
+	def accuracy(self):
 		correct = 0
 		size = len(self.solutions)
 		for i in range(0, size):
@@ -21,15 +33,9 @@ class Result(object):
 				self.mistakes.append(self.guesses[i])
 		return float(correct) / size
 
-	def correct(self):
-		return []
+	def save_guesses(self, filename):
+		print("Saving results to ", filename)
+		with open(filename, 'w') as f:
+			for g in self.guesses:
+				f.write(g + '\n')
 
-	def __str__(self):
-		if self.solutions:
-			assert len(self.solutions) == len(self.guesses)
-			return "Experiment {}\nPrecision: {}%".format(
-				self.datetime.strftime("%Y-%m-%d at %H:%M:%S"),
-				self.precision() * 100
-			)
-		else:
-			return "No solutions provided. Can not calculate metrics."
